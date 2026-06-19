@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/apiClient";
+import {
+  safeFormatTimestamp,
+  safeStringify,
+} from "@/lib/format";
 
 type AppEvent = {
   id: string;
@@ -38,17 +42,19 @@ export default function EventsPage() {
       )}
       {items && items.length > 0 && (
         <ol className="flex flex-col gap-2 text-sm">
-          {items.map((e) => (
+          {items.map((e, i) => (
             <li
-              key={e.id}
+              // Combine the position with the (possibly missing) id so that
+              // events without an id still get unique React keys.
+              key={`${i}-${String(e.id ?? "")}`}
               className="rounded border border-zinc-200 p-3 font-mono text-xs dark:border-zinc-800"
             >
-              <div className="flex justify-between text-zinc-500">
-                <span>{e.type}</span>
-                <span>{new Date(e.ts).toISOString()}</span>
+              <div className="flex justify-between gap-4 text-zinc-500">
+                <span className="break-all">{String(e.type ?? "")}</span>
+                <span className="shrink-0">{safeFormatTimestamp(e.ts)}</span>
               </div>
-              <pre className="mt-2 whitespace-pre-wrap break-words">
-                {JSON.stringify(e.payload, null, 2)}
+              <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words">
+                {safeStringify(e.payload)}
               </pre>
             </li>
           ))}

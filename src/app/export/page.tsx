@@ -1,5 +1,6 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_AGENTPAY_API_BASE ?? "http://localhost:3001";
+import { resolveApiBase } from "@/lib/resolveApiBase";
+
+const API_BASE = resolveApiBase();
 
 export const metadata = { title: "Export" };
 

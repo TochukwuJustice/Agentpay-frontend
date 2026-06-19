@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { resolveApiBase } from "@/lib/resolveApiBase";
 
 type QueryResult = {
   agent: string;
@@ -8,8 +9,7 @@ type QueryResult = {
   total: number;
 } | null;
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_AGENTPAY_API_BASE ?? "http://localhost:3001";
+const API_BASE = resolveApiBase();
 
 export default function UsagePage() {
   const [agent, setAgent] = useState("");

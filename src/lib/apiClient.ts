@@ -2,8 +2,11 @@
 // Centralises base URL resolution and error handling so call sites stay
 // small.
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_AGENTPAY_API_BASE ?? "http://localhost:3001";
+import { resolveApiBase } from "./resolveApiBase";
+
+// Resolved at module load time so any misconfiguration surfaces during boot
+// rather than at the first fetch.
+const API_BASE = resolveApiBase();
 
 export type ApiError = {
   error: string;
@@ -15,14 +18,21 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
+  // Spread `init` first so caller-provided top-level keys win, then re-apply
+  // `headers` so our default `Content-Type: application/json` is preserved
+  // unless the caller explicitly overrides it via `init.headers`.
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
     ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
   });
   if (res.status === 204) return undefined as T;
   const body = (await res.json()) as T | ApiError;
   if (!res.ok) {
-    throw Object.assign(new Error((body as ApiError).message), body as ApiError);
+    const err = new Error((body as ApiError).message);
+    throw Object.assign(err, body as ApiError);
   }
   return body as T;
 }
