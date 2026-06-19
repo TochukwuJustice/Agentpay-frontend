@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiGet, apiPost, apiDelete } from "@/lib/apiClient";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type KeyItem = { prefix: string; label: string; createdAt: number };
 
@@ -10,6 +11,7 @@ export default function ApiKeysPage() {
   const [label, setLabel] = useState("");
   const [created, setCreated] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRevoke, setPendingRevoke] = useState<KeyItem | null>(null);
 
   const load = () =>
     apiGet<{ items: KeyItem[] }>("/api/v1/api-keys")
@@ -48,6 +50,17 @@ export default function ApiKeysPage() {
       tabIndex={-1}
       className="mx-auto flex min-h-[60vh] max-w-3xl flex-col gap-6 p-8 focus:outline-none"
     >
+      <ConfirmDialog
+        open={pendingRevoke !== null}
+        title="Revoke API key?"
+        description={`"${pendingRevoke?.label}" will stop working immediately.`}
+        confirmLabel="Revoke"
+        onConfirm={() => {
+          if (pendingRevoke) onDelete(pendingRevoke.prefix);
+          setPendingRevoke(null);
+        }}
+        onCancel={() => setPendingRevoke(null)}
+      />
       <h1 className="text-3xl font-semibold tracking-tight">API keys</h1>
       <form onSubmit={onCreate} className="flex gap-2">
         <input
@@ -93,7 +106,7 @@ export default function ApiKeysPage() {
               </div>
               <button
                 type="button"
-                onClick={() => onDelete(k.prefix)}
+                onClick={() => setPendingRevoke(k)}
                 className="rounded border border-zinc-300 px-3 py-1 text-xs hover:border-rose-500 hover:text-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-zinc-700"
               >
                 Revoke

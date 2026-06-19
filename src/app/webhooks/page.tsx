@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiGet, apiPost, apiDelete } from "@/lib/apiClient";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type Webhook = { id: string; url: string; events: string[]; createdAt: number };
 
@@ -10,6 +11,7 @@ export default function WebhooksPage() {
   const [url, setUrl] = useState("");
   const [eventsCsv, setEventsCsv] = useState("usage.recorded,usage.settled");
   const [error, setError] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<Webhook | null>(null);
 
   const load = () =>
     apiGet<{ items: Webhook[] }>("/api/v1/webhooks")
@@ -35,12 +37,32 @@ export default function WebhooksPage() {
     }
   };
 
+  const onDelete = async (id: string) => {
+    try {
+      await apiDelete(`/api/v1/webhooks/${id}`);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   return (
     <main
       id="main-content"
       tabIndex={-1}
       className="mx-auto flex min-h-[60vh] max-w-3xl flex-col gap-6 p-8 focus:outline-none"
     >
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        title="Remove webhook?"
+        description={`Deliveries to "${pendingRemove?.url}" will stop immediately.`}
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (pendingRemove) onDelete(pendingRemove.id);
+          setPendingRemove(null);
+        }}
+        onCancel={() => setPendingRemove(null)}
+      />
       <h1 className="text-3xl font-semibold tracking-tight">Webhooks</h1>
       <form onSubmit={onCreate} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">
@@ -85,9 +107,7 @@ export default function WebhooksPage() {
               </div>
               <button
                 type="button"
-                onClick={() =>
-                  apiDelete(`/api/v1/webhooks/${w.id}`).then(() => load())
-                }
+                onClick={() => setPendingRemove(w)}
                 className="rounded border border-zinc-300 px-3 py-1 text-xs hover:border-rose-500 hover:text-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-zinc-700"
               >
                 Remove
