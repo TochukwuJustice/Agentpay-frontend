@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ToastProvider } from "@/components/ToastProvider";
+import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,13 +36,46 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Blocking inline script injected into <head> before the body renders.
+ *
+ * Reads the stored theme preference from localStorage (same key as
+ * THEME_STORAGE_KEY in src/lib/theme.ts) and applies the `dark` class to
+ * <html> synchronously so there is no flash of the wrong colour scheme
+ * (FOUC) before React hydration runs.
+ *
+ * - localStorage access is wrapped in try/catch for private-browsing
+ *   environments that throw on storage access.
+ * - An absent or invalid stored value falls back to `prefers-color-scheme`,
+ *   matching the behaviour of readTheme() / effectiveTheme().
+ * - THEME_STORAGE_KEY is embedded at build time so this script and the TS
+ *   helpers always reference the same key — no drift possible.
+ */
+const prePaintScript = `(function(){try{var s=localStorage.getItem("${THEME_STORAGE_KEY}");var d=s==="dark"||(s!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.classList.toggle("light",!d);}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    /*
+     * suppressHydrationWarning: the pre-paint script mutates the `class`
+     * attribute on <html> before React mounts, so the server-rendered
+     * class list will differ from the client's first render. This prop
+     * suppresses the resulting hydration mismatch warning on the root
+     * element only — it does NOT suppress warnings in child components.
+     */
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+         * dangerouslySetInnerHTML is intentional: the script must be a raw
+         * inline string so the browser parser executes it synchronously,
+         * before the first CSS paint. The content is entirely static
+         * (no user input, no interpolated secrets), eliminating XSS risk.
+         */}
+        <script dangerouslySetInnerHTML={{ __html: prePaintScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

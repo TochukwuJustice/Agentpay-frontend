@@ -1,6 +1,9 @@
 export type Theme = "light" | "dark" | "system";
 
-const KEY = "agentpay.theme";
+export const THEME_STORAGE_KEY = "agentpay.theme";
+
+/** @internal use THEME_STORAGE_KEY instead of this alias */
+const KEY = THEME_STORAGE_KEY;
 
 export function readTheme(): Theme {
   if (typeof window === "undefined") return "system";
