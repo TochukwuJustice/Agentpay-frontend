@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiGet } from "@/lib/apiClient";
+import { Spinner } from "@/components/Spinner";
+import { useApi } from "@/lib/useApi";
 
 type Entry = { version: string; date: string; notes: string[] };
 
 export default function ChangelogPage() {
-  const [entries, setEntries] = useState<Entry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    apiGet<{ entries: Entry[] }>("/api/v1/changelog")
-      .then((b) => setEntries(b.entries))
-      .catch((e) => setError(e.message));
-  }, []);
+  const state = useApi<{ entries: Entry[] }>("/api/v1/changelog");
+  const entries = state.status === "ok" ? state.data.entries : null;
 
   return (
     <main
@@ -22,9 +16,10 @@ export default function ChangelogPage() {
       className="mx-auto flex min-h-[60vh] max-w-3xl flex-col gap-6 p-8 focus:outline-none"
     >
       <h1 className="text-3xl font-semibold tracking-tight">Changelog</h1>
-      {error && (
+      {state.status === "loading" && <Spinner label="Loading changelog" />}
+      {state.status === "error" && (
         <p role="alert" className="text-sm text-rose-600">
-          {error}
+          {state.error}
         </p>
       )}
       {entries && (
