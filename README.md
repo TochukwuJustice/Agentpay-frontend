@@ -100,6 +100,33 @@ primitives in `src/components`.
 
 Because the variable is `NEXT_PUBLIC_*`, its value is exposed to the browser. Never put API secrets in it - it is used only for routing public HTTP requests.
 
+## Route map (frontend)
+
+The following frontend routes are defined under `src/app/`:
+
+| Route | Page |
+|-------|------|
+| `/` | Home |
+| `/about` | About |
+| `/admin` | Admin |
+| `/agents` | Agents |
+| `/agents/:agent` | Agent detail |
+| `/api-keys` | API keys |
+| `/changelog` | Changelog |
+| `/docs` | Docs |
+| `/events` | Events |
+| `/export` | Export |
+| `/search` | Search |
+| `/services` | Services |
+| `/services/:serviceId` | Service detail |
+| `/services/:serviceId/agents` | Service agents |
+| `/services/:serviceId/edit` | Edit service |
+| `/services/new` | New service |
+| `/settings` | Settings |
+| `/stats` | Stats |
+| `/usage` | Usage |
+| `/webhooks` | Webhooks |
+
 ## Home page quick-links
 
 The home page (`src/app/page.tsx`) renders the primary navigation entry points (Manage services, View stats, Record usage, Agents, Docs) and the external Stellar link inside a `<nav aria-label="Quick links">` landmark with a semantic `<ul>` / `<li>` list structure. This improves discoverability for screen-reader users.

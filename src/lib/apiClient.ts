@@ -46,11 +46,8 @@ function shouldUseTimeout(timeoutMs: number) {
 }
 
 async function readJson(res: Response): Promise<unknown> {
-  try {
-    return await res.json();
-  } catch {
-    return undefined;
-  }
+  const parsed = await res.json();
+  return parsed === null ? undefined : parsed;
 }
 
 function createHttpError(status: number, body: unknown) {
@@ -114,7 +111,15 @@ export async function apiFetch<T>(
       },
     });
     if (res.status === 204) return undefined as T;
-    const body = (await readJson(res)) as T | ApiError | undefined;
+    let body: T | ApiError | undefined;
+    try {
+      body = (await readJson(res)) as T | ApiError | undefined;
+    } catch {
+      if (!res.ok) {
+        throw createHttpError(res.status, undefined);
+      }
+      throw new Error("Response body was not valid JSON");
+    }
     if (!res.ok) {
       throw createHttpError(res.status, body);
     }

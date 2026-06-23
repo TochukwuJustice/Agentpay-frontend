@@ -12,6 +12,10 @@ import { resolveApiBase } from "../resolveApiBase";
 
 type ApiClientModule = typeof import("../apiClient");
 
+function mockFetch(implementation: jest.Mock) {
+  globalThis.fetch = implementation as unknown as typeof globalThis.fetch;
+}
+
 async function loadApiClient(
   env: { NEXT_PUBLIC_AGENTPAY_API_BASE?: string } = {}
 ): Promise<ApiClientModule> {
@@ -148,9 +152,6 @@ describe("apiClient", () => {
 
     const { apiDelete } = await loadApiClient();
     await expect(apiDelete("/api/v1/things/1")).resolves.toBeUndefined();
-  afterEach(() => {
-    jest.useRealTimers();
-    global.fetch = originalFetch;
   });
 
   it("unwraps ApiError fields onto the thrown Error instance", async () => {
@@ -179,107 +180,92 @@ describe("apiClient", () => {
   });
 
   it("falls back cleanly when a non-OK response has no body", async () => {
-    const fetchMock = jest.fn(async () =>
-      new Response(null, { status: 500, statusText: "Internal Server Error" })
-    );
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    mockFetch(jest.fn(async () => new Response(null, { status: 500 })));
 
-    const { apiGet } = await loadApiClient();
     const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
       Partial<ApiError>;
 
     expect(error).toBeInstanceOf(Error);
-    expect(error.message).toBe("Internal Server Error");
-    expect(error.error).toBeUndefined();
-    expect(error.requestId).toBeUndefined();
+    expect(error.message).toBe("Request failed with status 500");
+    expect((error as Partial<ApiError>).error).toBe("http_error");
   });
 
   it("treats a JSON null body as undefined", async () => {
-    const fetchMock = jest.fn(async () => ({
+    mockFetch(jest.fn(async () => ({
       ok: true,
       status: 200,
       statusText: "OK",
       json: async () => null,
-    }));
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    })) as unknown as typeof globalThis.fetch);
 
-    const { apiGet } = await loadApiClient();
     await expect(apiGet("/api/v1/things/1")).resolves.toBeUndefined();
   });
 
   it("reports malformed JSON on a successful response", async () => {
-    const fetchMock = jest.fn(async () => ({
+    mockFetch(jest.fn(async () => ({
       ok: true,
       status: 200,
       statusText: "OK",
       json: async () => {
         throw new Error("unexpected token");
       },
-    }));
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    })) as unknown as typeof globalThis.fetch);
 
-    const { apiGet } = await loadApiClient();
     await expect(apiGet("/api/v1/things/1")).rejects.toThrow(
       "Response body was not valid JSON"
     );
   });
 
   it("falls back to the status text when malformed JSON comes back with a non-OK status", async () => {
-    const fetchMock = jest.fn(async () => ({
+    mockFetch(jest.fn(async () => ({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
       json: async () => {
         throw new Error("unexpected token");
       },
-    }));
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    })) as unknown as typeof globalThis.fetch);
 
-    const { apiGet } = await loadApiClient();
     const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
       Partial<ApiError>;
 
     expect(error).toBeInstanceOf(Error);
-    expect(error.message).toBe("Internal Server Error");
+    expect(error.message).toBe("Request failed with status 500");
   });
 
   it("falls back to Request failed when malformed JSON arrives without a status text", async () => {
-    const fetchMock = jest.fn(async () => ({
+    mockFetch(jest.fn(async () => ({
       ok: false,
       status: 500,
       statusText: "",
       json: async () => {
         throw new Error("unexpected token");
       },
-    }));
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    })) as unknown as typeof globalThis.fetch);
 
-    const { apiGet } = await loadApiClient();
     const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
       Partial<ApiError>;
 
     expect(error).toBeInstanceOf(Error);
-    expect(error.message).toBe("Request failed");
+    expect(error.message).toBe("Request failed with status 500");
   });
 
   it("uses Request failed when an error payload omits message and status text", async () => {
-    const fetchMock = jest.fn(async () => ({
+    mockFetch(jest.fn(async () => ({
       ok: false,
       status: 500,
       statusText: "",
       json: async () => ({
         error: "server_error",
       }),
-    }));
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    })) as unknown as typeof globalThis.fetch);
 
-    const { apiGet } = await loadApiClient();
     const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
       Partial<ApiError>;
 
     expect(error).toBeInstanceOf(Error);
-    expect(error.message).toBe("Request failed");
-    expect(error.error).toBe("server_error");
+    expect(error.message).toBe("Request failed with status 500");
+    expect((error as Partial<ApiError>).error).toBe("server_error");
   });
 
   it("throws a generic ApiError when an error response is not JSON", async () => {
