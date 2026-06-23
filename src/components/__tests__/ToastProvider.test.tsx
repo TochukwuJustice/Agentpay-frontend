@@ -287,11 +287,12 @@ describe("ToastProvider", () => {
   // ------------------------------------------------------------------
   describe("context value", () => {
     it("exposes a stable push function across re-renders", () => {
-      const ref: { current: ((m: string) => void) | null } = { current: null };
+      const pushRef: { current: ((m: string) => void) | null } = { current: null };
 
       function Spy() {
         const { push } = useToast();
-        ref.current = push;
+        // eslint-disable-next-line react-hooks/immutability
+        pushRef.current = push;
         return null;
       }
 
@@ -301,13 +302,13 @@ describe("ToastProvider", () => {
         </ToastProvider>,
       );
 
-      const firstPush = ref.current;
+      const firstPush = pushRef.current;
       rerender(
         <ToastProvider>
           <Spy />
         </ToastProvider>,
       );
-      expect(ref.current).toBe(firstPush);
+      expect(pushRef.current).toBe(firstPush);
     });
   });
 });

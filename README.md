@@ -130,6 +130,10 @@ The root layout keeps the home route on the default `AgentPay` title and applies
 | `/services/[serviceId]/agents` | `Top agents {serviceId}` |
 | `/agents/[agent]` | `Agent {agent}` |
 
+## Usage metering feedback
+
+The `/usage` page forms include explicit in-flight feedback. When submitting a query or recording usage, the submit button disables and shows a busy state indicator. The form clears stale results from previous requests immediately upon a new submission to avoid confusing a previous result with an in-flight query for a different agent.
+
 ## Services list paging
 
 The `/services` page now uses server-driven pagination with the shared `Spinner`, `EmptyState`, and `Pagination` components.

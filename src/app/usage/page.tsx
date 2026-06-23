@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { resolveApiBase } from "@/lib/resolveApiBase";
+import { Spinner } from "@/components/Spinner";
 
 type QueryResult = {
   agent: string;
@@ -22,14 +23,19 @@ export default function UsagePage() {
   const [queryService, setQueryService] = useState("");
   const [queryResult, setQueryResult] = useState<QueryResult>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isQuerying, setIsQuerying] = useState(false);
 
   const onRecord = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isRecording) return;
+    setStatus({ kind: "idle" });
     const requestsNum = Number(requests);
     if (!Number.isInteger(requestsNum) || requestsNum <= 0) {
       setStatus({ kind: "error", message: "requests must be a positive integer" });
       return;
     }
+    setIsRecording(true);
     try {
       const res = await fetch(`${API_BASE}/api/v1/usage`, {
         method: "POST",
@@ -45,26 +51,31 @@ export default function UsagePage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "network error";
       setStatus({ kind: "error", message });
+    } finally {
+      setIsRecording(false);
     }
   };
 
   const onQuery = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isQuerying) return;
     setQueryError(null);
+    setQueryResult(null);
+    setIsQuerying(true);
     try {
       const url = `${API_BASE}/api/v1/usage/${encodeURIComponent(queryAgent)}/${encodeURIComponent(queryService)}`;
       const res = await fetch(url);
       const body = await res.json();
       if (!res.ok) {
         setQueryError(body?.message ?? "query failed");
-        setQueryResult(null);
         return;
       }
       setQueryResult(body);
     } catch (err) {
       const message = err instanceof Error ? err.message : "network error";
       setQueryError(message);
-      setQueryResult(null);
+    } finally {
+      setIsQuerying(false);
     }
   };
 
@@ -120,9 +131,10 @@ export default function UsagePage() {
           </label>
           <button
             type="submit"
-            className="self-start rounded-full bg-black px-5 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-white dark:text-black"
+            disabled={isRecording}
+            className="self-start rounded-full bg-black px-5 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-50 dark:bg-white dark:text-black"
           >
-            Record
+            {isRecording ? <Spinner label="Recording…" /> : "Record"}
           </button>
         </form>
         {status.kind === "ok" && (
@@ -164,9 +176,10 @@ export default function UsagePage() {
           </label>
           <button
             type="submit"
-            className="self-start rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-zinc-700"
+            disabled={isQuerying}
+            className="self-start rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-50 dark:border-zinc-700"
           >
-            Query
+            {isQuerying ? <Spinner label="Querying…" /> : "Query"}
           </button>
         </form>
         {queryResult && (
