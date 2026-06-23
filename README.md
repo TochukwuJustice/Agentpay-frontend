@@ -92,6 +92,12 @@ See [docs/components.md](docs/components.md) for the shared component catalog,
 including prop tables, usage examples, and accessibility notes for the
 primitives in `src/components`.
 
+## API integration
+
+See [docs/api-integration.md](docs/api-integration.md) for the complete reference of
+every backend endpoint the dashboard calls — request bodies, response shapes, the
+shared `ApiError` envelope, the 204/no-body convention, and pause-flag semantics.
+
 ## Environment variables
 
 | Variable | Visibility | Default | Purpose |
