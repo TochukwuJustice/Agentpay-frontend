@@ -68,6 +68,11 @@ A baseline security header set (CSP, `X-Frame-Options: DENY`, `Referrer-Policy`,
 
 The `/events` page renders server-supplied JSON payloads. Each payload is serialised through `safeStringify` (`src/lib/format.ts`) with a hard cap (`EVENT_PAYLOAD_MAX_CHARS`, default 5,000 chars) and a visible `…(truncated)` marker. Circular references, `BigInt`, functions, and malformed timestamps are replaced with safe sentinels so a bad payload can't crash the page.
 
+- Use the filter input to narrow the log by event type. The query is debounced before the page re-fetches, and the backend request includes `?type=...` when a filter is active.
+- Toggle `Auto-refresh` to enable polling every 5 seconds. The page clears the interval on unmount so the dashboard stops refreshing when you navigate away.
+- Each event row now shows both the ISO timestamp and a relative `TimeAgo` label for quick scanning.
+- When no events match the current filter, the page shows the shared `EmptyState` component with a clear-filter action.
+
 ## Document titles
 
 The root layout keeps the home route on the default `AgentPay` title and applies the template `"%s — AgentPay"` to route-specific titles.
