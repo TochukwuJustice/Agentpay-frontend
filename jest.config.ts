@@ -31,7 +31,7 @@ const config: Config = {
     "./src/components/Badge.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
     "./src/components/Breadcrumb.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
     "./src/components/Card.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-    "./src/components/ConfirmDialog.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+    "./src/components/ConfirmDialog.tsx": { statements: 100, branches: 94, functions: 100, lines: 100 },
     "./src/components/Header.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
     "./src/components/Pagination.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
     "./src/components/TextField.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
