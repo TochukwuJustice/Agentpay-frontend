@@ -90,6 +90,15 @@ export async function apiFetch<T>(
     }, effectiveTimeoutMs);
   }
 
+  function finish() {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+    if (callerSignal !== undefined) {
+      callerSignal.removeEventListener("abort", abortFromCaller);
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...restInit,
@@ -99,30 +108,30 @@ export async function apiFetch<T>(
         ...(headers ?? {}),
       },
     });
-    if (res.status === 204) return undefined as T;
+    if (res.status === 204) { finish(); return undefined as T; }
     let body: T | ApiError | undefined;
     try {
       body = (await readJson(res)) as T | ApiError | undefined;
     } catch {
       if (!res.ok) {
+        finish();
         throw createHttpError(res.status, undefined);
       }
+      finish();
       throw new Error("Response body was not valid JSON");
     }
     if (!res.ok) {
+      finish();
       throw createHttpError(res.status, body);
     }
+    finish();
     return body as T;
   } catch (error) {
+    finish();
     if (timeoutError !== undefined) {
       throw timeoutError;
     }
     throw error;
-  } finally {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-    callerSignal?.removeEventListener("abort", abortFromCaller);
   }
 }
 
