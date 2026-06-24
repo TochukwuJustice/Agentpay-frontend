@@ -252,8 +252,8 @@ The `/changelog` page keeps using `useApi("/api/v1/changelog")` for loading rele
 The frontend formats currency (Stroops / XLM) consistently using the helper `formatStroops` (located in `src/lib/format.ts`):
 
 - **Stroops definition:** 1 XLM = 10,000,000 stroops (Stellar's base unit).
-- **Sub-cent amounts:** If the value converts to less than `0.01 XLM` (but is non-zero), the formatting shows the amount in raw `stroops` (e.g., `50000 stroops`).
-- **Standard amounts:** Standard amounts are formatted in `XLM` with two decimal places (e.g., `1.50 XLM`).
+- **Sub-cent amounts:** If the value converts to less than `0.01 XLM` (but is non-zero), the formatting shows the amount in grouped raw `stroops` (e.g., `50,000 stroops`).
+- **Standard amounts:** Standard amounts are formatted in grouped `XLM` with at least two and up to seven fraction digits so large values stay readable and fractional XLM is not hidden (e.g., `1.50 XLM`, `1,234.56789 XLM`).
 - **Zero amount:** A zero price formats to `0 XLM`.
 
 ## Internationalization (groundwork)
