@@ -246,6 +246,40 @@ The frontend formats currency (Stroops / XLM) consistently using the helper `for
 - **Standard amounts:** Standard amounts are formatted in `XLM` with two decimal places (e.g., `1.50 XLM`).
 - **Zero amount:** A zero price formats to `0 XLM`.
 
+## Internationalization (groundwork)
+
+User-facing copy is being centralized into a single typed catalog so a future
+localization effort has one place to translate. This is **groundwork only** — no
+i18n library is wired up yet and no rendered copy changes.
+
+- **Single source of truth:** [`src/lib/messages.ts`](src/lib/messages.ts)
+  exports a typed, namespaced `messages` object (one namespace per surface),
+  mirroring the established pattern in
+  [`src/app/pageTitles.ts`](src/app/pageTitles.ts). It is `as const`, so keys and
+  literal values are fully typed and a typo on a key fails at compile time.
+- **Consuming it:** import `messages` and read the string instead of hard-coding
+  it inline:
+
+  ```tsx
+  import { messages } from "@/lib/messages";
+
+  export function Footer() {
+    return <footer>{messages.footer.text}</footer>;
+  }
+  ```
+
+- **Migrated so far:** [`src/components/Footer.tsx`](src/components/Footer.tsx),
+  the home page [`src/app/page.tsx`](src/app/page.tsx), and the about page
+  [`src/app/about/page.tsx`](src/app/about/page.tsx). Follow the same pattern when
+  touching other surfaces — add the string to a namespace in `messages.ts`, then
+  reference it from the component.
+- **Future i18n:** because the catalog is framework-agnostic, adopting
+  `next-intl` / `next-i18next` later can wrap the same namespaced shape (e.g. a
+  per-locale catalog keyed off `Messages`) without changing existing call sites.
+- **Tests:** [`src/lib/__tests__/messages.test.ts`](src/lib/__tests__/messages.test.ts)
+  asserts keys resolve, there are no duplicate key paths, unknown keys fail at
+  the type level, and the migrated surfaces still render the exact original copy.
+
 ## Document titles
 
 The root layout keeps the home route on the default `AgentPay` title and applies the template `"%s — AgentPay"` to route-specific titles.
