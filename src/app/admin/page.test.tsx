@@ -93,6 +93,7 @@ describe("AdminPage pause/unpause", () => {
   it("disables the toggle while the request is in flight to prevent double-submit", async () => {
     let pauseResolve!: (value: void) => void;
     const pausePromise = new Promise<void>((r) => {
+      // @ts-ignore
       pauseResolve = r;
     });
 
