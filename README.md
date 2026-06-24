@@ -213,27 +213,26 @@ The frontend formats currency (Stroops / XLM) consistently using the helper `for
 
 The root layout keeps the home route on the default `AgentPay` title and applies the template `"%s — AgentPay"` to route-specific titles.
 
-| Route                          | Title                      |
-| ------------------------------ | -------------------------- |
-| `/`                            | `AgentPay`                 |
-| `/services`                    | `Services`                 |
-| `/services/new`                | `New service`              |
-| `/usage`                       | `Usage metering`           |
-| `/agents`                      | `Agents`                   |
-| `/admin`                       | `Admin`                    |
-| `/stats`                       | `Stats`                    |
-| `/events`                      | `Event log`                |
-| `/webhooks`                    | `Webhooks`                 |
-| `/api-keys`                    | `API keys`                 |
-| `/search`                      | `Search`                   |
-| `/services/[serviceId]`        | `Service {serviceId}`      |
-| `/services/[serviceId]/edit`   | `Edit service {serviceId}` |
-| `/services/[serviceId]/agents` | `Top agents {serviceId}`   |
-| `/agents/[agent]`              | `Agent {agent}`            |
+| Route | Title |
+|-------|-------|
+| `/` | `AgentPay` |
+| `/about` | `About AgentPay` |
+| `/services` | `Services` |
+| `/services/new` | `New service` |
+| `/usage` | `Usage metering` |
+| `/agents` | `Agents` |
+| `/admin` | `Admin` |
+| `/stats` | `Stats` |
+| `/events` | `Event log` |
+| `/webhooks` | `Webhooks` |
+| `/api-keys` | `API keys` |
+| `/search` | `Search` |
+| `/services/[serviceId]` | `Service {serviceId}` |
+| `/services/[serviceId]/edit` | `Edit service {serviceId}` |
+| `/services/[serviceId]/agents` | `Top agents {serviceId}` |
+| `/agents/[agent]` | `Agent {agent}` |
 
-## Usage metering feedback
-
-The `/usage` page forms include explicit in-flight feedback. When submitting a query or recording usage, the submit button disables and shows a busy state indicator. The form clears stale results from previous requests immediately upon a new submission to avoid confusing a previous result with an in-flight query for a different agent.
+The `/about` page now exposes direct links to the dashboard surfaces described in its copy: `/services`, `/usage`, `/docs`, `/events`, `/webhooks`, `/api-keys`, and `/admin`.
 
 ## Services list paging
 
