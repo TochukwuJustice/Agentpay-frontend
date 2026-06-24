@@ -130,6 +130,16 @@ The root layout keeps the home route on the default `AgentPay` title and applies
 | `/services/[serviceId]/agents` | `Top agents {serviceId}` |
 | `/agents/[agent]` | `Agent {agent}` |
 
+## Footer links
+
+The global `Footer` component provides easy access to key secondary internal routes:
+- `/about`
+- `/docs`
+- `/changelog`
+- `/stats`
+
+It also features an external community link targeting the AgentPay Discord (`https://discord.gg/eXvRKkgcv`) rendered with appropriate safe linking attributes (`target="_blank"` and `rel="noopener noreferrer"`).
+
 ## Services list paging
 
 The `/services` page now uses server-driven pagination with the shared `Spinner`, `EmptyState`, and `Pagination` components.
