@@ -27,6 +27,10 @@ function reducer<T>(_state: State<T>, action: Action<T>): State<T> {
 /**
  * Fetch JSON from the AgentPay backend and react to path changes.
  *
+ * Pass `null` to skip fetching while keeping the current state. Responses from
+ * stale paths are ignored after unmount or path changes, so consumers do not
+ * need to add their own "is mounted" guard around this hook.
+ *
  * @example
  * const state = useApi<{ items: AppEvent[] }>("/api/v1/events?limit=100");
  * if (state.status === "loading") return <Spinner label="Loading events" />;

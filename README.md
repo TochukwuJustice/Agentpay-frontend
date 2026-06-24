@@ -122,6 +122,12 @@ See [docs/components.md](docs/components.md) for the shared component catalog,
 including prop tables, usage examples, and accessibility notes for the
 primitives in `src/components`.
 
+## Shared hooks
+
+See [docs/hooks.md](docs/hooks.md) for the shared hook reference, including
+signatures, return shapes, cancellation and SSR notes, and usage examples for
+the hooks in `src/lib`.
+
 ## Accessibility
 
 ### Route loading skeleton
