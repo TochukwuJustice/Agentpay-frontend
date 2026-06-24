@@ -104,6 +104,13 @@ Because the variable is `NEXT_PUBLIC_*`, its value is exposed to the browser. Ne
 
 A baseline security header set (CSP, `X-Frame-Options: DENY`, `Referrer-Policy`, `X-Content-Type-Options`, `Permissions-Policy`, HSTS) is wired up in `next.config.ts` via `src/lib/securityHeaders.ts`. The CSP `connect-src` directive tracks `NEXT_PUBLIC_AGENTPAY_API_BASE` automatically; `<a href>` links to external sites (`https://stellar.org`, etc.) remain navigable.
 
+## Webhook registration validation
+
+The `/webhooks` form (`src/app/webhooks/page.tsx`) validates client-side before calling the API:
+
+- **URL**: only `https://` URLs are accepted. `http://`, `javascript:`, and other non-`https` schemes (or values that fail to parse as a URL at all) are rejected with a field-level error surfaced via `TextField`'s `error` prop (`aria-invalid="true"`, message linked through `aria-describedby`). The native `type="url"` / `required` attributes still apply and run first; the `https`-only check augments them.
+- **Events**: the comma-separated events field is normalised before submit — each entry is trimmed, empty entries (including whitespace-only and trailing-comma artifacts) are dropped, and duplicates are removed while preserving first-seen order. Submit is blocked with a field error if the normalised list is empty.
+
 ## Event log rendering
 
 The `/events` page renders server-supplied JSON payloads. Each payload is serialised through `safeStringify` (`src/lib/format.ts`) with a hard cap (`EVENT_PAYLOAD_MAX_CHARS`, default 5,000 chars) and a visible `…(truncated)` marker. Circular references, `BigInt`, functions, and malformed timestamps are replaced with safe sentinels so a bad payload can't crash the page.

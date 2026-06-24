@@ -3,13 +3,40 @@
 import { useEffect, useState } from "react";
 import { apiGet, apiPost, apiDelete } from "@/lib/apiClient";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { TextField } from "@/components/TextField";
 
 type Webhook = { id: string; url: string; events: string[]; createdAt: number };
+
+// Only https:// targets are accepted — rejects http:// (cleartext) and
+// non-network schemes like javascript: outright.
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+// Trims each entry, drops empties (so "a,,b," and "" don't produce blank
+// event names), and de-duplicates while preserving first-seen order.
+function normaliseEvents(csv: string): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of csv.split(",")) {
+    const trimmed = raw.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result;
+}
 
 export default function WebhooksPage() {
   const [items, setItems] = useState<Webhook[] | null>(null);
   const [url, setUrl] = useState("");
   const [eventsCsv, setEventsCsv] = useState("usage.recorded,usage.settled");
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [eventsError, setEventsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<Webhook | null>(null);
 
@@ -24,10 +51,17 @@ export default function WebhooksPage() {
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const events = eventsCsv
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+
+    const events = normaliseEvents(eventsCsv);
+    const nextUrlError = isHttpsUrl(url)
+      ? null
+      : "Enter a valid https:// URL.";
+    const nextEventsError =
+      events.length === 0 ? "Enter at least one event name." : null;
+    setUrlError(nextUrlError);
+    setEventsError(nextEventsError);
+    if (nextUrlError || nextEventsError) return;
+
     try {
       await apiPost("/api/v1/webhooks", { url, events });
       setUrl("");
@@ -65,26 +99,29 @@ export default function WebhooksPage() {
       />
       <h1 className="text-3xl font-semibold tracking-tight">Webhooks</h1>
       <form onSubmit={onCreate} className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1 text-sm">
-          <span>URL</span>
-          <input
-            required
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/agentpay-hook"
-            className="rounded-md border border-zinc-300 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span>Events (comma-separated)</span>
-          <input
-            required
-            value={eventsCsv}
-            onChange={(e) => setEventsCsv(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </label>
+        <TextField
+          label="URL"
+          required
+          type="url"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            if (urlError) setUrlError(null);
+          }}
+          placeholder="https://example.com/agentpay-hook"
+          error={urlError ?? undefined}
+          description={urlError ? undefined : "Must be an https:// URL."}
+        />
+        <TextField
+          label="Events (comma-separated)"
+          required
+          value={eventsCsv}
+          onChange={(e) => {
+            setEventsCsv(e.target.value);
+            if (eventsError) setEventsError(null);
+          }}
+          error={eventsError ?? undefined}
+        />
         <button
           type="submit"
           className="self-start rounded-full bg-black px-5 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
