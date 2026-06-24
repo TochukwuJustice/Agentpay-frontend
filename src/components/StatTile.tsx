@@ -3,6 +3,11 @@ import { type ReactNode } from "react";
 type Props = {
   label: ReactNode;
   value: ReactNode;
+  /**
+   * Optional trend information to display alongside the stat.
+   * `delta` specifies the numeric change. A positive delta renders an 'up' cue (▲); a negative delta renders a 'down' cue (▼).
+   * `positiveIsGood` determines the semantic color (default: true). If true, a positive delta is emerald and negative is rose. If false, the colors are flipped.
+   */
   trend?: { delta: number; positiveIsGood?: boolean };
 };
 
@@ -19,8 +24,15 @@ export function StatTile({ label, value, trend }: Props) {
               : "text-rose-700"
           }`}
         >
-          {trend.delta > 0 ? "+" : ""}
-          {trend.delta}
+          <span className="sr-only">
+            {trend.delta > 0 ? "up " : trend.delta < 0 ? "down " : "unchanged "}
+            {Math.abs(trend.delta)}
+          </span>
+          <span aria-hidden="true">
+            {trend.delta > 0 ? "▲ " : trend.delta < 0 ? "▼ " : "— "}
+            {trend.delta > 0 ? "+" : ""}
+            {trend.delta}
+          </span>
         </p>
       )}
     </div>
