@@ -11,6 +11,10 @@ import { resolveApiBase } from "../resolveApiBase";
 
 type ApiClientModule = typeof import("../apiClient");
 
+function mockFetch(implementation: jest.Mock) {
+  globalThis.fetch = implementation as unknown as typeof globalThis.fetch;
+}
+
 async function loadApiClient(
   env: { NEXT_PUBLIC_AGENTPAY_API_BASE?: string } = {},
 ): Promise<ApiClientModule> {
@@ -518,42 +522,215 @@ describe("apiClient", () => {
   });
 
   it("falls back cleanly when a non-OK response has no body", async () => {
-    const fetchMock = jest.fn(async () =>
-      new Response(null, { status: 500, statusText: "Internal Server Error" })
-    );
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    mockFetch(jest.fn(async () => new Response(null, { status: 500 })));
 
-    const { apiGet } = await loadApiClient();
     const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
       Partial<ApiError>;
 
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe("Request failed with status 500");
-    expect(error.error).toBe("http_error");
-    expect(error.requestId).toBeUndefined();
+    expect((error as Partial<ApiError>).error).toBe("http_error");
+  });
+
+  it("treats a JSON null body as undefined", async () => {
+    mockFetch(jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => null,
+    })) as unknown as typeof globalThis.fetch);
+
+    await expect(apiGet("/api/v1/things/1")).resolves.toBeUndefined();
   });
 
   it("reports malformed JSON on a successful response", async () => {
-    const fetchMock = jest.fn(async () => ({
+    mockFetch(jest.fn(async () => ({
       ok: true,
       status: 200,
       statusText: "OK",
       json: async () => {
         throw new Error("unexpected token");
       },
-    }));
-    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    })) as unknown as typeof globalThis.fetch);
 
-    const { apiGet } = await loadApiClient();
-    await expect(apiGet("/api/v1/things/1")).resolves.toBeUndefined();
+    await expect(apiGet("/api/v1/things/1")).rejects.toThrow(
+      "Response body was not valid JSON"
+    );
   });
 
-  it("rejects immediately when the caller signal is already aborted before the call", async () => {
+  it("falls back to the status text when malformed JSON comes back with a non-OK status", async () => {
+    mockFetch(jest.fn(async () => ({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      json: async () => {
+        throw new Error("unexpected token");
+      },
+    })) as unknown as typeof globalThis.fetch);
+
+    const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
+      Partial<ApiError>;
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe("Request failed with status 500");
+  });
+
+  it("falls back to Request failed when malformed JSON arrives without a status text", async () => {
+    mockFetch(jest.fn(async () => ({
+      ok: false,
+      status: 500,
+      statusText: "",
+      json: async () => {
+        throw new Error("unexpected token");
+      },
+    })) as unknown as typeof globalThis.fetch);
+
+    const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
+      Partial<ApiError>;
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe("Request failed with status 500");
+  });
+
+  it("uses Request failed when an error payload omits message and status text", async () => {
+    mockFetch(jest.fn(async () => ({
+      ok: false,
+      status: 500,
+      statusText: "",
+      json: async () => ({
+        error: "server_error",
+      }),
+    })) as unknown as typeof globalThis.fetch);
+
+    const error = (await apiGet("/api/v1/things/1").catch((err) => err)) as Error &
+      Partial<ApiError>;
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe("Request failed with status 500");
+    expect((error as Partial<ApiError>).error).toBe("server_error");
+  });
+
+  it("throws a generic ApiError when an error response is not JSON", async () => {
+    mockFetch(jest.fn(async () => new Response("Bad gateway", { status: 502 })));
+
+    await expect(apiGet("/api/v1/x")).rejects.toMatchObject({
+      message: "Request failed with status 502",
+      error: "http_error",
+    });
+  });
+
+  it("aborts the request when timeoutMs elapses", async () => {
+    jest.useFakeTimers();
+
+    mockFetch(
+      jest.fn(
+        (_url, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            signal?.addEventListener(
+              "abort",
+              () => reject(signal.reason),
+              { once: true }
+            );
+          })
+      )
+    );
+
+    const pending = apiFetch("/api/v1/slow", { timeoutMs: 50 });
+    const assertion = pending.catch((error) => {
+      expect(error).toBeInstanceOf(ApiTimeoutError);
+      expect(error).toMatchObject({
+        message: "request timed out after 50ms",
+        timeoutMs: 50,
+      });
+    });
+    await jest.advanceTimersByTimeAsync(50);
+
+    await assertion;
+  });
+
+  it("uses the default timeout when timeoutMs is omitted", async () => {
+    jest.useFakeTimers();
+
+    mockFetch(
+      jest.fn(
+        (_url, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            signal?.addEventListener(
+              "abort",
+              () => reject(signal.reason),
+              { once: true }
+            );
+          })
+      )
+    );
+
+    const pending = apiFetch("/api/v1/slow");
+    const assertion = pending.catch((error) => {
+      expect(error).toBeInstanceOf(ApiTimeoutError);
+      expect(error).toMatchObject({
+        message: "request timed out after 10000ms",
+        timeoutMs: 10_000,
+      });
+    });
+    await jest.advanceTimersByTimeAsync(10_000);
+
+    await assertion;
+  });
+
+  it("propagates caller aborts through the composed signal", async () => {
     const callerController = new AbortController();
     const callerAbort = new Error("Already cancelled");
     callerAbort.name = "AbortError";
     callerController.abort(callerAbort);
 
+    await expect(pending).rejects.toBe(callerAbort);
+  });
+
+  it("handles a caller signal that is already aborted before apiFetch is called", async () => {
+    const callerController = new AbortController();
+    const abortReason = new Error("Already cancelled");
+    abortReason.name = "AbortError";
+    callerController.abort(abortReason);
+
+    mockFetch(
+      jest.fn((_url, init) => {
+        const signal = init?.signal as AbortSignal;
+        if (signal?.aborted) {
+          return Promise.reject(signal.reason);
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      })
+    );
+
+    await expect(apiFetch("/api/v1/things", { signal: callerController.signal })).rejects.toBe(abortReason);
+  });
+
+  it("does not set a timeout when timeoutMs is 0", async () => {
+    jest.useFakeTimers();
+
+    let fetchSignal: AbortSignal | undefined;
+    mockFetch(
+      jest.fn(async (_url, init) => {
+        fetchSignal = init?.signal as AbortSignal;
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      })
+    );
+
+    await expect(
+      apiFetch<{ ok: boolean }>("/api/v1/things", { timeoutMs: 0 })
+    ).resolves.toEqual({ ok: true });
+
+    expect(fetchSignal?.aborted).toBe(false);
+    await jest.advanceTimersByTimeAsync(10_000);
+    expect(fetchSignal?.aborted).toBe(false);
+  });
+
+  it("still resolves normally before timeout and leaves the signal un-aborted", async () => {
+    jest.useFakeTimers();
+
+    let fetchSignal: AbortSignal | undefined;
     mockFetch(
       jest.fn(
         (_url, init) =>

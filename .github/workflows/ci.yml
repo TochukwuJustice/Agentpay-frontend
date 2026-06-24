@@ -76,9 +76,6 @@ jobs:
                 repo: context.repo.repo,
                 body,
               });
-            } catch (err) {
-              // Fork PRs lack write access to the upstream repo — log and continue
-              // rather than failing the entire job.
-              console.warn(`Could not post coverage comment (status ${err.status ?? 'unknown'}): ${err.message}`);
+            } catch (error) {
+              console.warn('Could not post coverage comment (expected from forks):', error.message);
             }
-

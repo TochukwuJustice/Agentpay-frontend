@@ -34,11 +34,12 @@ function shouldUseTimeout(timeoutMs: number) {
   return Number.isFinite(timeoutMs) && timeoutMs > 0;
 }
 
-function createHttpError(
-  status: number,
-  statusText: string | undefined,
-  body: unknown,
-) {
+async function readJson(res: Response): Promise<unknown> {
+  const parsed = await res.json();
+  return parsed === null ? undefined : parsed;
+}
+
+function createHttpError(status: number, body: unknown) {
   const apiError =
     body && typeof body === "object" ? (body as Partial<ApiError>) : undefined;
 
@@ -96,6 +97,15 @@ export async function apiFetch<T>(
     }, effectiveTimeoutMs);
   }
 
+  function finish() {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+    if (callerSignal != null) {
+      callerSignal.removeEventListener("abort", abortFromCaller);
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...restInit,
@@ -105,67 +115,30 @@ export async function apiFetch<T>(
         ...(headers ?? {}),
       },
     });
-
-    if (res.status === 204) return undefined as T;
-
+    if (res.status === 204) { finish(); return undefined as T; }
     let body: T | ApiError | undefined;
     try {
-      body = (await readResponseBody(res)) as T | ApiError | undefined;
+      body = (await readJson(res)) as T | ApiError | undefined;
     } catch {
       if (!res.ok) {
-        throw createHttpError(res.status, res.statusText, undefined);
+        finish();
+        throw createHttpError(res.status, undefined);
       }
+      finish();
       throw new Error("Response body was not valid JSON");
     }
-
     if (!res.ok) {
-      throw createHttpError(res.status, res.statusText, body);
+      finish();
+      throw createHttpError(res.status, body);
     }
-
-    if (parsed === JSON_PARSE_FAILED) {
-      if (res.ok) {
-        throw new Error("Response body was not valid JSON");
-      }
-      // Non-ok with unparseable body: presence of a real body stream shifts the
-      // fallback message from the simple "Request failed" to the status-code form.
-      const hasRealBody = bodyStream !== null && bodyStream !== undefined;
-      const message =
-        res.statusText?.length > 0
-          ? res.statusText
-          : hasRealBody
-            ? `Request failed with status ${res.status}`
-            : "Request failed";
-      const err = new Error(message);
-      if (hasRealBody) Object.assign(err, { error: "http_error" });
-      throw err;
-    }
-
-    // JSON decoded as null (includes the test polyfill that converts a null body
-    // to JSON.parse("null") === null).
-    if (parsed === null) {
-      if (!res.ok) {
-        // Non-ok: treat null JSON as "no useful body" — report statusText or fallback.
-        const message = res.statusText?.length > 0 ? res.statusText : "Request failed";
-        throw new Error(message);
-      }
-      return undefined as T;
-    }
-
-    if (!res.ok) {
-      throw createHttpError(res.status, res.statusText ?? "", parsed);
-    }
-
-    return parsed as T;
+    finish();
+    return body as T;
   } catch (error) {
+    finish();
     if (timeoutError !== undefined) {
       throw timeoutError;
     }
     throw error;
-  } finally {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-    callerSignal?.removeEventListener("abort", abortFromCaller);
   }
 }
 
