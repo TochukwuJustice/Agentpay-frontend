@@ -2,8 +2,14 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { ConfirmDialog } from "../ConfirmDialog";
 
-function ConfirmDialogHarness() {
+function ConfirmDialogHarness({
+  dismissOnBackdrop = false,
+}: {
+  dismissOnBackdrop?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const onCancel = () => setOpen(false);
+
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>
@@ -14,12 +20,14 @@ function ConfirmDialogHarness() {
         open={open}
         title="Delete project"
         description="This action cannot be undone."
+        dismissOnBackdrop={dismissOnBackdrop}
         onConfirm={jest.fn()}
-        onCancel={() => setOpen(false)}
+        onCancel={onCancel}
       />
     </>
   );
 }
+
 
 const openDialog = () => {
   const trigger = screen.getByRole("button", { name: /open dialog/i });
@@ -217,4 +225,43 @@ describe("ConfirmDialog", () => {
     fireEvent.keyDown(dialog, { key: "Tab" });
     expect(cancelButton).toHaveFocus();
   });
+
+  it("does not cancel on backdrop click when dismissOnBackdrop is off", () => {
+    render(<ConfirmDialogHarness dismissOnBackdrop={false} />);
+
+    const { dialog, cancelButton } = openDialog();
+    const backdrop = dialog.parentElement as HTMLElement;
+
+    const onCancelSpy = jest.spyOn(cancelButton, "click");
+
+    fireEvent.mouseDown(backdrop);
+    expect(screen.getByRole("dialog", { name: /delete project/i })).toBeInTheDocument();
+
+    onCancelSpy.mockRestore();
+  });
+
+  it("cancels on backdrop click when dismissOnBackdrop is on", () => {
+    render(<ConfirmDialogHarness dismissOnBackdrop={true} />);
+
+    const { dialog } = openDialog();
+    const backdrop = dialog.parentElement as HTMLElement;
+
+    fireEvent.mouseDown(backdrop);
+
+    expect(screen.queryByRole("dialog", { name: /delete project/i })).not.toBeInTheDocument();
+  });
+
+  it("does not cancel when clicking inside the dialog panel", () => {
+    render(<ConfirmDialogHarness dismissOnBackdrop={true} />);
+
+    const { dialog, cancelButton } = openDialog();
+
+    fireEvent.mouseDown(cancelButton);
+
+    expect(screen.getByRole("dialog", { name: /delete project/i })).toBeInTheDocument();
+    // sanity: Cancel still works
+    fireEvent.click(cancelButton);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });
+

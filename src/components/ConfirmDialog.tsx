@@ -14,6 +14,11 @@ type Props = {
   description?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
+  /**
+   * When true, clicking the backdrop (outside the dialog panel) calls `onCancel`.
+   * Escape and the Cancel button always dismiss the dialog.
+   */
+  dismissOnBackdrop?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -43,6 +48,7 @@ export function ConfirmDialog({
   description,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
+  dismissOnBackdrop = false,
   onConfirm,
   onCancel,
 }: Props) {
@@ -122,6 +128,15 @@ export function ConfirmDialog({
     }
   };
 
+  const handleBackdropMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!dismissOnBackdrop) return;
+
+    // Only dismiss when the user clicked directly on the backdrop, not on the dialog panel.
+    if (event.target !== event.currentTarget) return;
+
+    onCancel();
+  };
+
   if (!open) return null;
   return (
     <div
@@ -132,6 +147,7 @@ export function ConfirmDialog({
       aria-describedby={description ? descriptionId : undefined}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
+      onMouseDown={handleBackdropMouseDown}
       className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
     >
       <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
