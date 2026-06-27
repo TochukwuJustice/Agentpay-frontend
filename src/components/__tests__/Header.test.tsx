@@ -8,7 +8,12 @@ jest.mock("next/navigation", () => ({
 import { usePathname } from "next/navigation";
 const mockPathname = usePathname as jest.Mock;
 
+function getMobileToggle() {
+  return screen.getByRole("button", { name: /menu/i });
+}
+
 describe("Header", () => {
+
   it("renders a named navigation landmark", () => {
     render(<Header />);
     expect(
@@ -93,6 +98,57 @@ describe("Header", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
+  it("mobile menu toggle has aria-expanded and aria-controls", () => {
+    mockPathname.mockReturnValue("/");
+    render(<Header />);
+
+    const toggle = getMobileToggle();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-controls");
+  });
+
+  it("mobile menu opens and closes on toggle", () => {
+    mockPathname.mockReturnValue("/");
+    render(<Header />);
+
+    const toggle = getMobileToggle();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("region", { name: /mobile navigation/i })).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("region", { name: /mobile navigation/i })).not.toBeInTheDocument();
+  });
+
+  it("mobile menu closes on Escape and returns focus to toggle", () => {
+    mockPathname.mockReturnValue("/");
+    render(<Header />);
+
+    const toggle = getMobileToggle();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  it("mobile menu auto-closes on route change", () => {
+    mockPathname.mockReturnValue("/");
+    const { rerender } = render(<Header />);
+
+    const toggle = getMobileToggle();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    mockPathname.mockReturnValue("/services");
+    rerender(<Header />);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("region", { name: /mobile navigation/i })).not.toBeInTheDocument();
+  });
+
   it("preserves focus-visible ring classes on links", () => {
     mockPathname.mockReturnValue("/");
     render(<Header />);
@@ -100,3 +156,4 @@ describe("Header", () => {
     expect(homeLink.className).toContain("focus-visible:outline");
   });
 });
+

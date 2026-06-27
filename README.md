@@ -157,7 +157,12 @@ Key design decisions:
   message renders, `reset` is called on click, no stack trace appears, and the
   component renders standalone without Header/Footer.
 
+## Responsive header navigation
+
+On small screens (below Tailwind `md`), the Header collapses into an accessible disclosure menu with a keyboard-operable toggle (Escape closes; focus returns to the toggle). The inline primary navigation remains for `md` and larger screens.
+
 ## Accessibility
+
 
 ### Route loading skeleton
 
