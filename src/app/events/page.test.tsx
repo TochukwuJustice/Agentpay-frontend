@@ -202,6 +202,96 @@ describe("EventsPage", () => {
     });
   });
 
+  it("throws when an item in the array is not an object", async () => {
+    const fetchMock = jest.fn(async () => jsonResponse({ items: [null] }));
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+
+    render(<EventsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /malformed events payload/i
+      );
+    });
+  });
+
+  it("handles the alternative { events: [...] } response shape", async () => {
+    const fetchMock = jest.fn(async () =>
+      jsonResponse({ events: FIRST_BATCH.slice(0, 1) })
+    );
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+
+    render(<EventsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("payment.created")).toBeInTheDocument();
+    });
+  });
+
+  it("coerces non-numeric/non-string/non-null ts to null", async () => {
+    const weirdEvents = [
+      {
+        id: "evt-weird",
+        ts: { some: "object" }, // should be coerced to null
+        type: "weird.event",
+        payload: {},
+      },
+    ];
+
+    const fetchMock = jest.fn(async () => jsonResponse({ items: weirdEvents }));
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+
+    render(<EventsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("weird.event")).toBeInTheDocument();
+    });
+
+    // When ts is null, safeFormatTimestamp returns \u2014 (em-dash)
+    // and TimeAgo is not rendered.
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
+  });
+
+  it("throws when neither items nor events is an array", async () => {
+    const fetchMock = jest.fn(async () =>
+      jsonResponse({ items: "not-an-array", events: "also-not-an-array" })
+    );
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+
+    render(<EventsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /malformed events payload/i
+      );
+    });
+  });
+
+  it("handles missing type field by coercing to empty string", async () => {
+    const missingTypeEvents = [
+      {
+        id: "evt-no-type",
+        ts: BASE_TIME.getTime(),
+        // type is missing
+        payload: { test: "missing-type" },
+      },
+    ];
+
+    const fetchMock = jest.fn(async () => jsonResponse({ items: missingTypeEvents }));
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+
+    render(<EventsPage />);
+
+    await waitFor(() => {
+      // Verify the payload is rendered, confirming the item was processed
+      expect(screen.getByText(/"test": "missing-type"/)).toBeInTheDocument();
+    });
+
+    // The type span should be empty but present
+    const spans = screen.getAllByRole("listitem")[0].querySelectorAll("span");
+    expect(spans[0]).toHaveTextContent("");
+  });
+
   it("caps rendered events at 50 and shows 'showing N of M' note when list exceeds cap", async () => {
     const largeList = Array.from({ length: 75 }, (_, i) => ({
       id: `evt-${i}`,
