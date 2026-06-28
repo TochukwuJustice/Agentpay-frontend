@@ -63,6 +63,8 @@ export default function UsagePage() {
     const parsed = parsePositiveInt(requests);
     if (!parsed.ok) {
       // Surface the validation message through the field error.
+      // We use a special kind 'validation-error' to distinguish it from API errors
+      // if we wanted to, but for now just making sure it's handled consistently.
       setStatus({ kind: "error", message: parsed.message });
       return;
     }
@@ -143,7 +145,11 @@ export default function UsagePage() {
             required
             value={requests}
             onChange={(e) => setRequests(e.target.value)}
-            error={status.kind === "error" ? status.message : undefined}
+            error={
+              status.kind === "error" && !status.requestId
+                ? status.message
+                : undefined
+            }
           />
 
           <button
@@ -161,7 +167,7 @@ export default function UsagePage() {
               : "Recorded."}
           </p>
         )}
-        {status.kind === "error" && (
+        {status.kind === "error" && status.requestId && (
           <p role="alert" className="text-sm text-rose-700 dark:text-rose-400">
             {formatAlert(status.message, status.requestId)}
           </p>

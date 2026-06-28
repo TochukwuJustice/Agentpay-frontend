@@ -140,17 +140,19 @@ export function ConfirmDialog({
   if (!open) return null;
   return (
     <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-title"
-      aria-describedby={description ? descriptionId : undefined}
-      tabIndex={-1}
-      onKeyDown={handleKeyDown}
       onMouseDown={handleBackdropMouseDown}
       className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
     >
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900 focus:outline-none"
+      >
         <h2 id="confirm-title" className="text-lg font-semibold">
           {title}
         </h2>
