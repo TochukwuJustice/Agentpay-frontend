@@ -1,5 +1,6 @@
 import { PageShell } from "@/components/PageShell";
 import { messages } from "@/lib/messages";
+import { resolveApiBase } from "@/lib/resolveApiBase";
 
 export const metadata = { title: "Docs — AgentPay" };
 
