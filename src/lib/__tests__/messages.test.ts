@@ -7,6 +7,22 @@ import AboutPage from "@/app/about/page";
 import DocsPage from "@/app/docs/page";
 import SettingsPage from "@/app/settings/page";
 
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: jest.fn().mockImplementation(() => ({
+      matches: false,
+      media: "(prefers-color-scheme: dark)",
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+});
+
 /**
  * Recursively collect every leaf value in the catalog together with its
  * dot-delimited key path. Used to assert that keys are unique and every leaf
