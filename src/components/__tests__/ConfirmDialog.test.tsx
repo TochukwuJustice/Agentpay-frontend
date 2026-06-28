@@ -230,7 +230,7 @@ describe("ConfirmDialog", () => {
     render(<ConfirmDialogHarness dismissOnBackdrop={false} />);
 
     const { dialog, cancelButton } = openDialog();
-    const backdrop = dialog.parentElement as HTMLElement;
+    const backdrop = dialog;
 
     const onCancelSpy = jest.spyOn(cancelButton, "click");
 
@@ -244,7 +244,7 @@ describe("ConfirmDialog", () => {
     render(<ConfirmDialogHarness dismissOnBackdrop={true} />);
 
     const { dialog } = openDialog();
-    const backdrop = dialog.parentElement as HTMLElement;
+    const backdrop = dialog;
 
     fireEvent.mouseDown(backdrop);
 
