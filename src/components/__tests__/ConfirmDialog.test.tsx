@@ -230,11 +230,10 @@ describe("ConfirmDialog", () => {
     render(<ConfirmDialogHarness dismissOnBackdrop={false} />);
 
     const { dialog, cancelButton } = openDialog();
-    const backdrop = dialog.parentElement as HTMLElement;
 
     const onCancelSpy = jest.spyOn(cancelButton, "click");
 
-    fireEvent.mouseDown(backdrop);
+    fireEvent.mouseDown(dialog);
     expect(screen.getByRole("dialog", { name: /delete project/i })).toBeInTheDocument();
 
     onCancelSpy.mockRestore();
@@ -244,9 +243,8 @@ describe("ConfirmDialog", () => {
     render(<ConfirmDialogHarness dismissOnBackdrop={true} />);
 
     const { dialog } = openDialog();
-    const backdrop = dialog.parentElement as HTMLElement;
 
-    fireEvent.mouseDown(backdrop);
+    fireEvent.mouseDown(dialog);
 
     expect(screen.queryByRole("dialog", { name: /delete project/i })).not.toBeInTheDocument();
   });
